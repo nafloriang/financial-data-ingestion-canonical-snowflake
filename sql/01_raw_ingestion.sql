@@ -45,6 +45,30 @@ CREATE FILE FORMAT IF NOT EXISTS FF_CSV
   SKIP_HEADER = 1
   FIELD_OPTIONALLY_ENCLOSED_BY = '"';
 
+CREATE TABLE IF NOT EXISTS FIN_INGEST.RAW.RAW_TXN_XML (
+  client_id STRING,
+  src_file STRING,
+  src_row_number NUMBER,
+  payload VARIANT,
+  ingest_ts TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+);
+
+CREATE TABLE IF NOT EXISTS FIN_INGEST.RAW.RAW_TXN_JSON (
+  client_id STRING,
+  src_file STRING,
+  src_row_number NUMBER,
+  payload VARIANT,
+  ingest_ts TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+);
+
+CREATE TABLE IF NOT EXISTS FIN_INGEST.RAW.RAW_CSV_GENERIC (
+  client_id STRING,
+  src_file STRING,
+  src_row_number NUMBER,
+  payload VARIANT,
+  ingest_ts TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+);
+
 /* RAW_LOAD_AUDIT physical schema already exists in environment.
    Keep hardening DDL aligned to exact column names. */
 CREATE TABLE IF NOT EXISTS FIN_INGEST.RAW.RAW_LOAD_AUDIT (
