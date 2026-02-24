@@ -53,7 +53,8 @@ Execute the SQL scripts in this exact order:
 9. `sql/08_smoke_tests.sql`
 
 ### Option B — SnowSQL CLI
-Use the `!source` commands shown in `main.sql`.
+`main.sql` is Snowsight-safe (no SnowSQL-only commands are executed).
+For SnowSQL, use the optional `!source` commands shown in `main.sql`.
 
 ---
 

@@ -74,11 +74,10 @@ One record per detected rule-hit for audit and downstream triage.
 1. Parse each source format independently.
 2. Harmonize key names with `COALESCE`.
 3. Convert values with `TRY_TO_TIMESTAMP_NTZ` / `TRY_TO_NUMBER`.
-4. Build dedupe key:
-   - primary: `(client_id, source_system, source_txn_id)`
-   - fallback: payload hash.
-5. Generate deterministic `canonical_txn_id` using SHA2.
-6. Mark first-class header anomalies in `anomaly_codes`.
+4. Build dedupe key using source transaction semantics with payload-hash fallback for null source IDs.
+5. Apply survivorship with `ROW_NUMBER() OVER (PARTITION BY client_id, source_txn_id ORDER BY ingest_ts DESC)`.
+6. Generate deterministic `canonical_txn_id` using SHA2.
+7. Mark first-class header anomalies in `anomaly_codes`.
 
 ### Line normalization
 1. `LATERAL FLATTEN` for JSON/XML nested line arrays.
