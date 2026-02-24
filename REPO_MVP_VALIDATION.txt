@@ -1,0 +1,87 @@
+Financial Data Ingestion & Canonical Modeling — Validación del repositorio (MVP)
+
+1) Inventario completo del repo
+
+- main.sql
+  Orquestador/manifest de ejecución (orden recomendado de módulos).
+
+- README.md
+  Documentación principal: objetivo, estructura, ejecución y mapeo a entregables del reto.
+
+- docs/architecture.md
+  Diseño de arquitectura por capas (RAW/STAGING/CANON/OPS), reglas de calidad y runbook operativo.
+
+- sql/00_bootstrap.sql
+  Bootstrap de entorno: creación idempotente de DB y esquemas base.
+
+- sql/01_raw_ingestion.sql
+  Ingesta RAW SQL-only: integración/stage/formats, tablas RAW, COPY INTO por formato y auditoría de carga.
+
+- sql/02_canonical_ddl.sql
+  DDL canónico: tablas CAN_TXN, CAN_TXN_LINE y CAN_TXN_ANOMALY.
+
+- sql/03_transform_headers.sql
+  Transformación de encabezados desde JSON/XML/CSV a staging canónico, tipado robusto y deduplicación.
+
+- sql/04_transform_lines.sql
+  Transformación de líneas (incluye estructuras anidadas) hacia staging canónico.
+
+- sql/05_merge_canonical.sql
+  Persistencia idempotente a CANON mediante MERGE (headers y líneas).
+
+- sql/06_anomaly_detection.sql
+  Detección y persistencia de anomalías de header y de línea.
+
+- sql/07_ops_views.sql
+  Vistas operativas de monitoreo (auditoría, conteos canónicos, conteos de anomalías).
+
+- sql/08_smoke_tests.sql
+  Consultas mínimas de verificación post-carga.
+
+
+2) Cómo esto satisface el reto solicitado
+
+Reto: "Ingestar XML/JSON/CSV con SQL, modelar canónico, transformar, detectar anomalías y entregar DDL/SQL/notas".
+
+2.1 Ingesta de cada archivo en Snowflake usando SQL
+- Se realiza con COPY INTO para XML, JSON y CSV, con FILE FORMAT específico por tipo.
+- ON_ERROR='CONTINUE' permite cargar válidos aunque existan filas defectuosas.
+- Se registra telemetría de carga con RESULT_SCAN(LAST_QUERY_ID()) en RAW_LOAD_AUDIT.
+
+2.2 Modelo canónico unificado para los 3 clientes
+- CAN_TXN: grano cabecera de transacción.
+- CAN_TXN_LINE: grano de línea.
+- CAN_TXN_ANOMALY: eventos de calidad/anomalías.
+
+2.3 Transformación de RAW a estructura canónica
+- Header normalization por fuente con COALESCE para variaciones de nombres de campos.
+- TRY_TO_* para casting tolerante a datos sucios.
+- Canonical key determinística con SHA2 y fallback por hash de payload.
+- Flatten de estructuras anidadas para line items (JSON/XML) y mapeo posicional en CSV.
+- MERGE para upsert idempotente y re-ejecutable.
+
+2.4 Manejo de anomalías
+- Duplicados: DUPLICATE_TXN (ventanas analíticas y conteo por clave).
+- Faltantes nulos/requeridos: MISSING_REQUIRED.
+- Negativos: NEGATIVE_AMOUNT, NEGATIVE_QTY, NEGATIVE_AMOUNT_LINE.
+- Campos extra/no esperados: preservados en attributes VARIANT para trazabilidad y tolerancia a drift.
+
+2.5 Entregables pedidos en el ejercicio
+- Raw ingestion DDL: sql/01_raw_ingestion.sql
+- Canonical DDL: sql/02_canonical_ddl.sql
+- Transformation SQL: sql/03_transform_headers.sql, sql/04_transform_lines.sql, sql/05_merge_canonical.sql
+- Notas de anomalías y arquitectura: sql/06_anomaly_detection.sql + docs/architecture.md
+
+
+3) Conclusión de calidad (MVP)
+
+Este repo sí cumple como MVP del ejercicio porque:
+- Es SQL-only y cubre XML/JSON/CSV de punta a punta.
+- Incluye modelo canónico y proceso de transformación/persistencia.
+- Maneja anomalías centrales solicitadas y no descarta evidencia.
+- Tiene observabilidad operativa y smoke tests básicos.
+- Es modular y ejecutable por orden definido en main.sql/README.
+
+Observación práctica (menor):
+- La ejecución real depende de permisos Snowflake para STORAGE INTEGRATION/STAGE externos y acceso al bucket GCS.
+  Eso es una condición de entorno, no una brecha del diseño SQL del MVP.
